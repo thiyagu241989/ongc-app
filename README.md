@@ -13,6 +13,8 @@ This repository contains a direct event-driven workflow for the Well Information
 
 ## Basic Flow
 
+![Well Information architecture flow](docs/images/architecture-flow.svg)
+
 ```text
 Well Information UI
         |
