@@ -28,6 +28,32 @@ Dashboard query
 
 The C# API validates and publishes events but does not write project data to PostgreSQL. The Node.js consumer is the sole project writer. Kafka delivery is at least once, so the consumer uses event IDs and aggregate versions to make processing idempotent.
 
+## Request and Data Flow Guarantees
+
+- **Valid Request:** UI -> C# API -> Validate -> Kafka -> Node.js -> PostgreSQL.
+- **Read Data:** UI -> C# Read API -> PostgreSQL -> UI.
+- **Invalid Request:** C# validation fails -> Return error -> No Kafka publish or DB write.
+- **Kafka Publish Failure:** C# retries -> If still fails, return failure -> Client can safely retry.
+- **Consumer Success:** Node.js consumes -> Validates -> Transactional upsert -> Commit Kafka offset.
+- **Duplicate or Out-of-Order Event:** Idempotency/version checks prevent incorrect data overwrite.
+- **Consumer Failure:** Node.js retries processing -> Continue normally if successful.
+- **Poison Message:** After retries fail -> Move message to DLQ -> Consumer continues processing other messages.
+- **DLQ Recovery:** Failed messages can be investigated and replayed later.
+- **C# Read API Rule:** C# only reads project data from PostgreSQL; it does not write project data.
+
+## System Maintenance Points
+
+- **API Health:** Monitor API availability, liveness/readiness, and failures.
+- **Kafka Health:** Monitor broker connectivity, disk usage, and topic health.
+- **Kafka Producer:** Handle retries and monitor publish failures.
+- **Kafka Consumer:** Monitor consumer status, lag, retries, and offsets.
+- **DLQ Monitoring:** Track failed messages and support investigation/replay.
+- **PostgreSQL Health:** Monitor database availability, connections, and performance.
+- **Data Integrity:** Handle duplicate, out-of-order, and repeated events safely.
+- **Error Handling:** Properly handle Kafka, DB, API, and malformed-payload failures.
+- **Configuration Management:** Maintain environment-specific configuration through `.env`.
+- **Logging and Tracing:** Use proper logs and correlation IDs to trace UI -> C# -> Kafka -> Node.js -> DB.
+
 ## Prerequisites
 
 - .NET SDK 10.0.302 or a compatible patch
