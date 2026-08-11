@@ -1,0 +1,198 @@
+openapi: 3.1.0
+info:
+  title: Well Information Management API
+  version: 1.0.0
+  license:
+    name: Proprietary
+servers:
+  - url: http://localhost:5080/api/v1
+security: []
+paths:
+  /projects:
+    post:
+      summary: Validate a project and publish ProjectCreated directly to Kafka
+      operationId: createProject
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectWriteRequest'
+      responses:
+        '202':
+          description: Event acknowledged by Kafka and accepted for Node.js processing
+          headers:
+            ETag:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Project' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '409': { $ref: '#/components/responses/Problem' }
+    get:
+      summary: Search Node-owned projects
+      operationId: listProjects
+      parameters:
+        - { name: search, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/ProjectStatus' } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+      responses:
+        '200':
+          description: Project page
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Project' } }
+        '400': { $ref: '#/components/responses/ValidationError' }
+  /projects/{projectId}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      summary: Get a Node-owned project
+      operationId: getProject
+      responses:
+        '200':
+          description: Project found
+          headers:
+            ETag:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Project' }
+        '404': { description: Project not found }
+    put:
+      summary: Validate fields and publish ProjectUpdated directly to Kafka
+      operationId: updateProject
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProjectWriteRequest' }
+      responses:
+        '200':
+          description: Project updated
+          headers:
+            ETag:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Project' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404': { description: Project not found }
+        '409': { $ref: '#/components/responses/Problem' }
+        '412': { $ref: '#/components/responses/Problem' }
+        '428': { $ref: '#/components/responses/Problem' }
+    delete:
+      summary: Publish ProjectDeleted directly to Kafka
+      operationId: deleteProject
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '204': { description: Project deleted }
+        '404': { description: Project not found }
+        '412': { $ref: '#/components/responses/Problem' }
+        '428': { $ref: '#/components/responses/Problem' }
+  /dashboard/projects/{projectId}:
+    get:
+      summary: Get the Node-stored dashboard record
+      operationId: getDashboardProject
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: Stored project
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Project' }
+        '404': { description: Projection absent or deleted }
+  /dashboard/projects:
+    get:
+      summary: Search Node-stored dashboard records
+      operationId: listDashboardProjects
+      parameters:
+        - { name: search, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/ProjectStatus' } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+      responses:
+        '200':
+          description: Stored project page
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Project' } }
+        '400': { $ref: '#/components/responses/ValidationError' }
+components:
+  parameters:
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      description: Quoted aggregate version returned as ETag
+      schema: { type: string, example: '"1"' }
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: false
+      schema: { type: string }
+  schemas:
+    ProjectStatus:
+      type: string
+      enum: [Draft, Active, OnHold, Completed, Cancelled]
+    ProjectWriteRequest:
+      type: object
+      additionalProperties: false
+      required: [projectCode, projectName, wellName, status]
+      properties:
+        projectCode: { type: string, pattern: '^[A-Z0-9][A-Z0-9_-]{2,49}$' }
+        projectName: { type: string, minLength: 1, maxLength: 200 }
+        wellName: { type: string, minLength: 1, maxLength: 200 }
+        operatorName: { type: [string, 'null'], maxLength: 200 }
+        fieldName: { type: [string, 'null'], maxLength: 200 }
+        basin: { type: [string, 'null'], maxLength: 150 }
+        location: { type: [string, 'null'], maxLength: 300 }
+        status: { $ref: '#/components/schemas/ProjectStatus' }
+        description: { type: [string, 'null'] }
+        plannedStartDate: { type: [string, 'null'], format: date }
+        plannedEndDate: { type: [string, 'null'], format: date }
+        latitude: { type: [number, 'null'], minimum: -90, maximum: 90 }
+        longitude: { type: [number, 'null'], minimum: -180, maximum: 180 }
+    Project:
+      allOf:
+        - $ref: '#/components/schemas/ProjectWriteRequest'
+        - type: object
+          required: [projectId, version, createdAtUtc, updatedAtUtc]
+          properties:
+            projectId: { type: string, format: uuid }
+            version: { type: integer, minimum: 1 }
+            createdAtUtc: { type: string, format: date-time }
+            updatedAtUtc: { type: string, format: date-time }
+    ProblemDetails:
+      type: object
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+  responses:
+    Problem:
+      description: Request conflict or precondition failure
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }

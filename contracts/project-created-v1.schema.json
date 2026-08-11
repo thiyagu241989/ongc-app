@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ongc.example/contracts/project-created-v1.schema.json",
+  "title": "ProjectCreatedV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "eventId",
+    "eventType",
+    "eventVersion",
+    "aggregateType",
+    "aggregateId",
+    "aggregateVersion",
+    "occurredAtUtc",
+    "correlationId",
+    "causationId",
+    "producer",
+    "data"
+  ],
+  "properties": {
+    "eventId": { "type": "string", "format": "uuid" },
+    "eventType": { "const": "ProjectCreated" },
+    "eventVersion": { "const": 1 },
+    "aggregateType": { "const": "Project" },
+    "aggregateId": { "type": "string", "format": "uuid" },
+    "aggregateVersion": { "type": "integer", "minimum": 1 },
+    "occurredAtUtc": { "type": "string", "format": "date-time" },
+    "correlationId": { "type": "string", "minLength": 1 },
+    "causationId": { "type": ["string", "null"] },
+    "producer": { "const": "well-information-api" },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "projectId",
+        "projectCode",
+        "projectName",
+        "wellName",
+        "operatorName",
+        "fieldName",
+        "basin",
+        "location",
+        "status",
+        "description",
+        "plannedStartDate",
+        "plannedEndDate",
+        "latitude",
+        "longitude",
+        "createdAtUtc",
+        "createdBy"
+      ],
+      "properties": {
+        "projectId": { "type": "string", "format": "uuid" },
+        "projectCode": { "type": "string", "pattern": "^[A-Z0-9][A-Z0-9_-]{2,49}$" },
+        "projectName": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "wellName": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "operatorName": { "type": ["string", "null"], "maxLength": 200 },
+        "fieldName": { "type": ["string", "null"], "maxLength": 200 },
+        "basin": { "type": ["string", "null"], "maxLength": 150 },
+        "location": { "type": ["string", "null"], "maxLength": 300 },
+        "status": { "enum": ["Draft", "Active", "OnHold", "Completed", "Cancelled"] },
+        "description": { "type": ["string", "null"] },
+        "plannedStartDate": { "type": ["string", "null"], "format": "date" },
+        "plannedEndDate": { "type": ["string", "null"], "format": "date" },
+        "latitude": { "type": ["number", "null"], "minimum": -90, "maximum": 90 },
+        "longitude": { "type": ["number", "null"], "minimum": -180, "maximum": 180 },
+        "createdAtUtc": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string", "minLength": 1, "maxLength": 100 }
+      }
+    }
+  }
+}

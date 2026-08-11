@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0b3d36">
+    <title>Well Information | Projects</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <header class="app-header">
+        <div class="brand-mark" aria-hidden="true">WI</div>
+        <div class="brand-copy">
+            <strong>Well Information</strong>
+            <span>Project operations</span>
+        </div>
+        <div class="environment"><span></span> Local environment</div>
+    </header>
+
+    <main>
+        <section class="page-heading">
+            <div>
+                <p class="eyebrow">PROJECT REGISTRY</p>
+                <h1>Create project</h1>
+                <p class="subtitle">Register well planning details and monitor downstream publication.</p>
+            </div>
+            <button class="secondary-button" id="reset-button" type="button">Clear form</button>
+        </section>
+
+        <div class="workspace">
+            <form id="project-form" novalidate>
+                <section class="form-section" aria-labelledby="identity-title">
+                    <div class="section-heading">
+                        <span class="section-number">01</span>
+                        <div><h2 id="identity-title">Project identity</h2><p>Primary project and well identifiers</p></div>
+                    </div>
+                    <div class="form-grid">
+                        <label class="field">
+                            <span>Project code <b>*</b></span>
+                            <input name="projectCode" id="project-code" required maxlength="50" minlength="3" pattern="[A-Z0-9][A-Z0-9_-]{2,49}" placeholder="ONGC-WO-2026-001" autocomplete="off">
+                            <small>Uppercase letters, numbers, hyphens, or underscores</small>
+                        </label>
+                        <label class="field">
+                            <span>Status <b>*</b></span>
+                            <select name="status" required>
+                                <option value="Draft">Draft</option>
+                                <option value="Active">Active</option>
+                                <option value="OnHold">On hold</option>
+                                <option value="Completed">Completed</option>
+                                <option value="Cancelled">Cancelled</option>
+                            </select>
+                        </label>
+                        <label class="field field-wide">
+                            <span>Project name <b>*</b></span>
+                            <input name="projectName" required maxlength="200" placeholder="Western Offshore Development">
+                        </label>
+                        <label class="field">
+                            <span>Well name <b>*</b></span>
+                            <input name="wellName" required maxlength="200" placeholder="WO-Alpha-01">
+                        </label>
+                        <label class="field">
+                            <span>Operator</span>
+                            <input name="operatorName" maxlength="200" value="ONGC" placeholder="ONGC">
+                        </label>
+                    </div>
+                </section>
+
+                <section class="form-section" aria-labelledby="location-title">
+                    <div class="section-heading">
+                        <span class="section-number">02</span>
+                        <div><h2 id="location-title">Location</h2><p>Field, basin, and coordinate details</p></div>
+                    </div>
+                    <div class="form-grid">
+                        <label class="field"><span>Field</span><input name="fieldName" maxlength="200" placeholder="Mumbai High"></label>
+                        <label class="field"><span>Basin</span><input name="basin" maxlength="150" placeholder="Mumbai Offshore Basin"></label>
+                        <label class="field field-wide"><span>Location</span><input name="location" maxlength="300" placeholder="Western Offshore, Arabian Sea"></label>
+                        <label class="field"><span>Latitude</span><input name="latitude" type="number" min="-90" max="90" step="any" placeholder="19.2450"></label>
+                        <label class="field"><span>Longitude</span><input name="longitude" type="number" min="-180" max="180" step="any" placeholder="71.3400"></label>
+                    </div>
+                </section>
+
+                <section class="form-section" aria-labelledby="schedule-title">
+                    <div class="section-heading">
+                        <span class="section-number">03</span>
+                        <div><h2 id="schedule-title">Schedule and scope</h2><p>Planned dates and operational context</p></div>
+                    </div>
+                    <div class="form-grid">
+                        <label class="field"><span>Planned start</span><input name="plannedStartDate" type="date"></label>
+                        <label class="field"><span>Planned end</span><input name="plannedEndDate" type="date"></label>
+                        <label class="field field-wide"><span>Description</span><textarea name="description" rows="4" placeholder="Project scope, objectives, and operational notes"></textarea></label>
+                    </div>
+                </section>
+
+                <div id="form-error" class="error-banner" role="alert" hidden></div>
+                <div class="form-actions">
+                    <span><b>*</b> Required fields</span>
+                    <button class="primary-button" id="submit-button" type="submit">
+                        <span class="button-label">Create project</span>
+                        <span class="button-spinner" aria-hidden="true"></span>
+                    </button>
+                </div>
+            </form>
+
+            <aside class="side-panel" aria-live="polite">
+                <div class="panel-heading">
+                    <div><p class="eyebrow">EVENT DELIVERY</p><h2>Pipeline status</h2></div>
+                    <span class="status-badge idle" id="pipeline-badge">Ready</span>
+                </div>
+                <ol class="pipeline" id="pipeline">
+                    <li data-step="api"><span>1</span><div><strong>C# API</strong><small>Awaiting project submission</small></div></li>
+                    <li data-step="kafka"><span>2</span><div><strong>Kafka</strong><small>projects.events.v1</small></div></li>
+                    <li data-step="consumer"><span>3</span><div><strong>Node.js consumer</strong><small>Event validation and processing</small></div></li>
+                    <li data-step="database"><span>4</span><div><strong>PostgreSQL</strong><small>Node-owned project storage</small></div></li>
+                </ol>
+                <div class="result-card" id="result-card" hidden>
+                    <div class="result-check" aria-hidden="true">✓</div>
+                    <div><small>Project created</small><strong id="result-name"></strong><code id="result-id"></code></div>
+                    <button type="button" id="copy-id" title="Copy project ID" aria-label="Copy project ID">Copy ID</button>
+                </div>
+            </aside>
+        </div>
+
+        <section class="recent-section" aria-labelledby="recent-title">
+            <div class="recent-heading">
+                <div><p class="eyebrow">POSTGRESQL</p><h2 id="recent-title">Recently stored projects</h2></div>
+                <button class="icon-button" id="refresh-button" type="button" title="Refresh projects" aria-label="Refresh projects">↻</button>
+            </div>
+            <div class="table-shell">
+                <table>
+                    <thead><tr><th>Project</th><th>Well</th><th>Operator</th><th>Status</th><th>Version</th><th>Stored</th></tr></thead>
+                    <tbody id="projects-table"><tr><td colspan="6" class="empty-state">Loading projects...</td></tr></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" hidden></div>
+    <script src="/app.js" defer></script>
+</body>
+</html>
