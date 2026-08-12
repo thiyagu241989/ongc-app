@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0b3d36">
+    <title>Well Information | Wellbore Designs</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/dashboard.css">
+    <link rel="stylesheet" href="/wellbore-designs.css">
+</head>
+<body>
+    <header class="app-header">
+        <div class="brand-mark" aria-hidden="true">WI</div>
+        <div class="brand-copy">
+            <strong>Well Information</strong>
+            <span>Wellbore design entry</span>
+        </div>
+        <nav class="header-nav">
+            <a href="/wellbore-designs.html" class="active">Wellbore Designs</a>
+            <a href="/dashboard.html">Dashboard</a>
+        </nav>
+        <div class="environment"><span></span> Local environment</div>
+    </header>
+
+    <main>
+        <!-- Tab switcher -->
+        <div class="tab-bar">
+            <button class="tab-btn active" data-tab="create">New Wellbore Design</button>
+            <button class="tab-btn" data-tab="milestone">Record Milestone</button>
+        </div>
+
+        <!-- TAB 1: Create Wellbore Design -->
+        <div class="tab-content active" id="tab-create">
+            <section class="page-heading">
+                <div>
+                    <p class="eyebrow">DATA ENTRY</p>
+                    <h1>Create wellbore design</h1>
+                    <p class="subtitle">Register a wellbore design with initial milestones to populate the dashboard.</p>
+                </div>
+                <button class="secondary-button" id="reset-create" type="button">Clear form</button>
+            </section>
+
+            <div class="workspace">
+                <form id="create-form" novalidate>
+                    <section class="form-section" aria-labelledby="design-identity-title">
+                        <div class="section-heading">
+                            <span class="section-number">01</span>
+                            <div><h2 id="design-identity-title">Design identity</h2><p>Well hierarchy and design metadata</p></div>
+                        </div>
+                        <div class="form-grid">
+                            <label class="field">
+                                <span>Company <b>*</b></span>
+                                <input name="company" required maxlength="100" placeholder="ONGC" value="ONGC">
+                            </label>
+                            <label class="field">
+                                <span>Project <b>*</b></span>
+                                <input name="project" required maxlength="100" placeholder="Mumbai High North">
+                            </label>
+                            <label class="field">
+                                <span>Site <b>*</b></span>
+                                <input name="site" required maxlength="100" placeholder="MHN Platform A">
+                            </label>
+                            <label class="field">
+                                <span>Well <b>*</b></span>
+                                <input name="well" required maxlength="100" placeholder="A-3">
+                            </label>
+                            <label class="field">
+                                <span>Wellbore <b>*</b></span>
+                                <input name="wellbore" required maxlength="100" placeholder="A-3 ST1">
+                            </label>
+                            <label class="field">
+                                <span>Design <b>*</b></span>
+                                <input name="design" required maxlength="100" placeholder="A-3 ST1 Casing Design">
+                            </label>
+                            <label class="field">
+                                <span>Owner name <b>*</b></span>
+                                <input name="ownerName" required maxlength="100" placeholder="R. Sharma">
+                            </label>
+                            <label class="field">
+                                <span>Design type <b>*</b></span>
+                                <select name="designType" required>
+                                    <option value="Standard">Standard (11 milestones)</option>
+                                    <option value="Montage">Montage (10 milestones)</option>
+                                </select>
+                            </label>
+                        </div>
+                    </section>
+
+                    <section class="form-section" aria-labelledby="milestones-title">
+                        <div class="section-heading">
+                            <span class="section-number">02</span>
+                            <div><h2 id="milestones-title">Initial milestones</h2><p>Optional — record milestones at creation time</p></div>
+                        </div>
+                        <div class="milestones-block">
+                            <div class="milestone-list" id="milestone-list">
+                                <!-- dynamically added milestone rows -->
+                            </div>
+                            <button type="button" class="secondary-button add-milestone-btn" id="add-milestone-btn">+ Add milestone</button>
+                            <p class="milestone-hint">Milestones mark progress through the DWP workflow. Add them in order: GnG data received → Approvals Level 3.</p>
+                        </div>
+                    </section>
+
+                    <div id="create-error" class="error-banner" role="alert" hidden></div>
+                    <div class="form-actions">
+                        <span><b>*</b> Required fields</span>
+                        <button class="primary-button" id="create-submit" type="submit">
+                            <span class="button-label">Create design</span>
+                            <span class="button-spinner" aria-hidden="true"></span>
+                        </button>
+                    </div>
+                </form>
+
+                <aside class="side-panel" aria-live="polite">
+                    <div class="panel-heading">
+                        <div><p class="eyebrow">EVENT DELIVERY</p><h2>Pipeline status</h2></div>
+                        <span class="status-badge idle" id="create-pipeline-badge">Ready</span>
+                    </div>
+                    <ol class="pipeline" id="create-pipeline">
+                        <li data-step="api"><span>1</span><div><strong>C# API</strong><small>Awaiting design submission</small></div></li>
+                        <li data-step="kafka"><span>2</span><div><strong>Kafka</strong><small>wellbore-designs.events.v1</small></div></li>
+                        <li data-step="consumer"><span>3</span><div><strong>Node.js consumer</strong><small>Event validation and processing</small></div></li>
+                        <li data-step="database"><span>4</span><div><strong>PostgreSQL</strong><small>Node-owned design storage</small></div></li>
+                    </ol>
+                    <div class="result-card" id="create-result" hidden>
+                        <strong id="create-result-name"></strong>
+                        <code id="create-result-id"></code>
+                        <button class="icon-button" id="copy-create-id" title="Copy ID">📋</button>
+                    </div>
+                    <div class="milestone-reference">
+                        <h3>Milestone order</h3>
+                        <ol class="ref-list">
+                            <li>GnG data received</li>
+                            <li>MDT conducted</li>
+                            <li>Design initiated</li>
+                            <li>Sent to DFS</li>
+                            <li>Received from DFS</li>
+                            <li>Sent to cementing team</li>
+                            <li>Received from cementing team</li>
+                            <li>Approvals initiated</li>
+                            <li>Approvals Level 1</li>
+                            <li>Approvals Level 2</li>
+                            <li>Approvals Level 3 <small>(Standard only)</small></li>
+                        </ol>
+                    </div>
+                </aside>
+            </div>
+        </div>
+
+        <!-- TAB 2: Record Milestone -->
+        <div class="tab-content" id="tab-milestone">
+            <section class="page-heading">
+                <div>
+                    <p class="eyebrow">MILESTONE ENTRY</p>
+                    <h1>Record milestone</h1>
+                    <p class="subtitle">Advance an existing wellbore design through its DWP lifecycle.</p>
+                </div>
+            </section>
+
+            <div class="workspace">
+                <form id="milestone-form" novalidate>
+                    <section class="form-section" aria-labelledby="select-design-title">
+                        <div class="section-heading">
+                            <span class="section-number">01</span>
+                            <div><h2 id="select-design-title">Select design</h2><p>Choose the wellbore design to update</p></div>
+                        </div>
+                        <div class="form-grid">
+                            <label class="field field-wide">
+                                <span>Wellbore design <b>*</b></span>
+                                <select name="wellboreDesignId" id="design-selector" required>
+                                    <option value="">Loading designs...</option>
+                                </select>
+                            </label>
+                            <div class="design-info" id="design-info" hidden>
+                                <div class="info-row"><span class="info-label">Status</span><span id="info-status" class="table-status">—</span></div>
+                                <div class="info-row"><span class="info-label">Type</span><span id="info-type">—</span></div>
+                                <div class="info-row"><span class="info-label">Owner</span><span id="info-owner">—</span></div>
+                                <div class="info-row"><span class="info-label">Milestones</span><span id="info-milestones">—</span></div>
+                                <div class="info-row"><span class="info-label">Next milestone</span><span id="info-next" class="next-milestone">—</span></div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="form-section" aria-labelledby="record-milestone-title">
+                        <div class="section-heading">
+                            <span class="section-number">02</span>
+                            <div><h2 id="record-milestone-title">Milestone details</h2><p>Select milestone type and date</p></div>
+                        </div>
+                        <div class="form-grid">
+                            <label class="field">
+                                <span>Milestone type <b>*</b></span>
+                                <select name="milestoneType" id="milestone-type-select" required>
+                                    <option value="">Select milestone...</option>
+                                    <option value="GnG data received">GnG data received</option>
+                                    <option value="MDT conducted">MDT conducted</option>
+                                    <option value="Design initiated">Design initiated</option>
+                                    <option value="Sent to DFS">Sent to DFS</option>
+                                    <option value="Received from DFS">Received from DFS</option>
+                                    <option value="Sent to cementing team">Sent to cementing team</option>
+                                    <option value="Received from cementing team">Received from cementing team</option>
+                                    <option value="Approvals initiated">Approvals initiated</option>
+                                    <option value="Approvals Level 1">Approvals Level 1</option>
+                                    <option value="Approvals Level 2">Approvals Level 2</option>
+                                    <option value="Approvals Level 3">Approvals Level 3</option>
+                                </select>
+                            </label>
+                            <label class="field">
+                                <span>Occurred at <b>*</b></span>
+                                <input name="occurredAt" type="datetime-local" id="milestone-occurred" required>
+                            </label>
+                        </div>
+                    </section>
+
+                    <div id="milestone-error" class="error-banner" role="alert" hidden></div>
+                    <div class="form-actions">
+                        <span><b>*</b> Required fields</span>
+                        <button class="primary-button" id="milestone-submit" type="submit">
+                            <span class="button-label">Record milestone</span>
+                            <span class="button-spinner" aria-hidden="true"></span>
+                        </button>
+                    </div>
+                </form>
+
+                <aside class="side-panel" aria-live="polite">
+                    <div class="panel-heading">
+                        <div><p class="eyebrow">EVENT DELIVERY</p><h2>Pipeline status</h2></div>
+                        <span class="status-badge idle" id="ms-pipeline-badge">Ready</span>
+                    </div>
+                    <ol class="pipeline" id="ms-pipeline">
+                        <li data-step="api"><span>1</span><div><strong>C# API</strong><small>Awaiting milestone</small></div></li>
+                        <li data-step="kafka"><span>2</span><div><strong>Kafka</strong><small>wellbore-designs.events.v1</small></div></li>
+                        <li data-step="consumer"><span>3</span><div><strong>Node.js consumer</strong><small>Event validation</small></div></li>
+                        <li data-step="database"><span>4</span><div><strong>PostgreSQL</strong><small>Milestone projection</small></div></li>
+                    </ol>
+                </aside>
+            </div>
+        </div>
+
+        <!-- Existing Designs Table -->
+        <section class="recent-section">
+            <div class="recent-heading">
+                <div><p class="eyebrow">REGISTRY</p><h2>Wellbore designs</h2></div>
+                <button class="secondary-button" id="refresh-designs" type="button">↻ Refresh</button>
+            </div>
+            <div class="table-shell">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Company / Project</th>
+                            <th>Well / Wellbore</th>
+                            <th>Design</th>
+                            <th>Owner</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Milestones</th>
+                            <th>Version</th>
+                        </tr>
+                    </thead>
+                    <tbody id="designs-table">
+                        <tr><td colspan="8" class="empty-state">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" hidden></div>
+    <script src="/wellbore-designs.js" defer></script>
+</body>
+</html>

@@ -1,5 +1,18 @@
 namespace WellInformation.Contracts;
 
+public sealed record EventEnvelope<TData>(
+    Guid EventId,
+    string EventType,
+    int EventVersion,
+    string AggregateType,
+    Guid AggregateId,
+    long AggregateVersion,
+    DateTimeOffset OccurredAtUtc,
+    string CorrelationId,
+    string? CausationId,
+    string Producer,
+    TData Data);
+
 public sealed record MilestoneEntry(
     string MilestoneType,
     DateTimeOffset OccurredAt);

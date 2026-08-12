@@ -50,7 +50,7 @@ export class DeadLetterQueuePublisher {
           offset: payload.message.offset,
           reason
         },
-        "Project event sent to DLQ"
+        "Event sent to DLQ"
       );
     } catch (error) {
       this.logger.error(
@@ -61,7 +61,7 @@ export class DeadLetterQueuePublisher {
           offset: payload.message.offset,
           reason
         },
-        "Failed to publish project event to DLQ"
+        "Failed to publish event to DLQ"
       );
       throw error;
     }

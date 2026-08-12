@@ -1,6 +1,50 @@
-@WellInformation.Api_HostAddress = http://localhost:5059
+@host = http://localhost:5080
 
-GET {{WellInformation.Api_HostAddress}}/weatherforecast/
+### Create wellbore design
+POST {{host}}/api/v1/wellbore-designs
+Content-Type: application/json
+X-Correlation-ID: {{$guid}}
+
+{
+  "company": "ONGC",
+  "project": "Mumbai High North",
+  "site": "MHN Platform A",
+  "well": "A-1",
+  "wellbore": "A-1 ST1",
+  "design": "A-1 ST1 Casing Design",
+  "ownerName": "R. Sharma",
+  "designType": "Standard",
+  "milestones": [
+    { "milestoneType": "GnG data received", "occurredAt": "2026-08-01T06:00:00Z" }
+  ]
+}
+
+### List wellbore designs
+GET {{host}}/api/v1/wellbore-designs?pageSize=10
 Accept: application/json
 
-###
+### Record milestone
+POST {{host}}/api/v1/wellbore-designs/{{designId}}/milestones
+Content-Type: application/json
+X-Correlation-ID: {{$guid}}
+
+{
+  "milestoneType": "MDT conducted",
+  "occurredAt": "2026-08-02T10:30:00Z"
+}
+
+### Dashboard summary
+GET {{host}}/api/v1/dashboard/insight/summary
+Accept: application/json
+
+### Progress timeline
+GET {{host}}/api/v1/dashboard/insight/progress-timeline?limit=10
+Accept: application/json
+
+### Well register
+GET {{host}}/api/v1/dashboard/insight/well-register
+Accept: application/json
+
+### Health check
+GET {{host}}/health/live
+Accept: application/json

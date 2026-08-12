@@ -212,11 +212,3 @@ public sealed class KafkaWellboreDesignService(
             milestones.Select(m => new MilestoneResponse(m.MilestoneType, m.OccurredAt)).ToList());
     }
 }
-
-public sealed class DuplicateWellboreDesignException(
-    string company, string project, string site, string well, string wellbore, string design)
-    : Exception($"A wellbore design already exists for Company={company}, Project={project}, Site={site}, Well={well}, Wellbore={wellbore}, Design={design}.")
-{
-    public string Company { get; } = company;
-    public string Well { get; } = well;
-}

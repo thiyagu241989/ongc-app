@@ -1,0 +1,170 @@
+/* Wellbore Designs page — extends styles.css + dashboard.css */
+
+/* Tab bar */
+.tab-bar {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 24px;
+    border-bottom: 2px solid var(--line);
+}
+.tab-btn {
+    padding: 10px 22px;
+    border: none;
+    background: none;
+    font-size: 14px;
+    font-weight: 650;
+    color: var(--muted);
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: color .15s, border-color .15s;
+}
+.tab-btn:hover { color: var(--ink); }
+.tab-btn.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+}
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* Milestone rows in create form */
+.milestones-block {
+    width: 100%;
+}
+.milestone-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+.milestone-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 200px 36px;
+    gap: 10px;
+    align-items: center;
+}
+.milestone-row select,
+.milestone-row input {
+    height: 38px;
+    padding: 0 10px;
+    font-size: 13px;
+}
+.milestone-row .remove-ms {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--danger);
+    font-size: 14px;
+    display: grid;
+    place-items: center;
+    border-radius: 4px;
+}
+.milestone-row .remove-ms:hover {
+    background: #fef2f2;
+}
+.add-milestone-btn {
+    font-size: 13px;
+    height: 34px;
+    padding: 0 16px;
+}
+.milestone-hint {
+    margin: 8px 0 0;
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.5;
+}
+
+/* Milestone reference sidebar */
+.milestone-reference {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+}
+.milestone-reference h3 {
+    margin: 0 0 10px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+}
+.ref-list {
+    margin: 0;
+    padding-left: 22px;
+    font-size: 12px;
+    line-height: 2;
+    color: var(--ink);
+}
+.ref-list small {
+    color: var(--muted);
+    font-weight: 400;
+}
+
+/* Design info panel in milestone tab */
+.design-info {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    padding: 14px 16px;
+    background: #f8faf9;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+}
+.info-row {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.info-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+}
+.info-row span:last-child {
+    font-size: 14px;
+    font-weight: 600;
+}
+.next-milestone {
+    color: var(--primary);
+}
+
+/* Status colors in table */
+.status-completed { color: var(--success); font-weight: 650; }
+.status-inprogress { color: #b8860b; font-weight: 650; }
+.status-data { color: #3b82f6; font-weight: 650; }
+
+/* Recent section spacing */
+.recent-section {
+    margin-top: 32px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 24px;
+}
+.recent-heading {
+    margin-bottom: 16px;
+}
+
+/* Result card */
+.result-card {
+    margin-top: 16px;
+    padding: 14px 16px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: var(--radius);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+.result-card strong {
+    font-size: 14px;
+}
+.result-card code {
+    font-size: 11px;
+    color: var(--muted);
+    word-break: break-all;
+}

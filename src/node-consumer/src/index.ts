@@ -2,9 +2,7 @@ import { Kafka, logLevel } from "kafkajs";
 import { Pool } from "pg";
 import pino from "pino";
 import { config } from "./config.js";
-import { ProjectEventConsumerHandler } from "./handlers/ProjectEventConsumerHandler.js";
 import { WellboreDesignEventConsumerHandler } from "./handlers/WellboreDesignEventConsumerHandler.js";
-import { ProjectRepository } from "./repositories/projectRepository.js";
 import { WellboreDesignRepository } from "./repositories/wellboreDesignRepository.js";
 import { DeadLetterQueuePublisher } from "./services/DeadLetterQueuePublisher.js";
 
@@ -17,25 +15,16 @@ const kafka = new Kafka({
 const pool = new Pool({ connectionString: config.databaseUrl, max: 10 });
 const consumer = kafka.consumer({ groupId: config.kafkaGroupId });
 const deadLetterProducer = kafka.producer({ allowAutoTopicCreation: false, idempotent: true });
-const repository = new ProjectRepository(pool, config.kafkaClientId, config.kafkaGroupId);
-const deadLetterQueuePublisher = new DeadLetterQueuePublisher(
-  deadLetterProducer,
-  config.kafkaDlqTopic,
-  config.kafkaGroupId,
-  config.kafkaClientId,
-  logger
-);
-const wellboreDesignDlqPublisher = new DeadLetterQueuePublisher(
+const dlqPublisher = new DeadLetterQueuePublisher(
   deadLetterProducer,
   config.kafkaWellboreDesignDlqTopic,
   config.kafkaGroupId,
   config.kafkaClientId,
   logger
 );
-const eventConsumerHandler = new ProjectEventConsumerHandler(repository, deadLetterQueuePublisher, logger);
 const wellboreDesignRepository = new WellboreDesignRepository(pool, config.kafkaClientId, config.kafkaGroupId);
 const wellboreDesignHandler = new WellboreDesignEventConsumerHandler(
-  wellboreDesignRepository, wellboreDesignDlqPublisher, logger
+  wellboreDesignRepository, dlqPublisher, logger
 );
 
 let isShuttingDown = false;
@@ -46,18 +35,14 @@ pool.on("error", (error) => {
 
 async function start(): Promise<void> {
   await pool.query("SELECT 1");
-  await deadLetterQueuePublisher.connect();
+  await dlqPublisher.connect();
   await consumer.connect();
-  await consumer.subscribe({ topics: [config.kafkaTopic, config.kafkaWellboreDesignTopic], fromBeginning: false });
+  await consumer.subscribe({ topics: [config.kafkaWellboreDesignTopic], fromBeginning: false });
   await consumer.run({
     autoCommit: false,
     eachMessage: async (payload) => {
       try {
-        if (payload.topic === config.kafkaWellboreDesignTopic) {
-          await wellboreDesignHandler.handle(payload);
-        } else {
-          await eventConsumerHandler.handle(payload);
-        }
+        await wellboreDesignHandler.handle(payload);
       } catch (error) {
         logger.error(
           {
@@ -93,7 +78,7 @@ async function start(): Promise<void> {
   });
 
   logger.info(
-    { topics: [config.kafkaTopic, config.kafkaWellboreDesignTopic], groupId: config.kafkaGroupId },
+    { topics: [config.kafkaWellboreDesignTopic], groupId: config.kafkaGroupId },
     "Consumer started"
   );
 }
@@ -107,7 +92,7 @@ async function shutdown(signal: string): Promise<void> {
   logger.info({ signal }, "Consumer shutting down");
   const shutdownResults = await Promise.allSettled([
     consumer.disconnect(),
-    deadLetterQueuePublisher.disconnect(),
+    dlqPublisher.disconnect(),
     pool.end()
   ]);
 
