@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ongc.example/contracts/milestone-recorded-v1.schema.json",
+  "title": "MilestoneRecordedV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "eventId",
+    "eventType",
+    "eventVersion",
+    "aggregateType",
+    "aggregateId",
+    "aggregateVersion",
+    "occurredAtUtc",
+    "correlationId",
+    "causationId",
+    "producer",
+    "data"
+  ],
+  "properties": {
+    "eventId": { "type": "string", "format": "uuid" },
+    "eventType": { "const": "MilestoneRecorded" },
+    "eventVersion": { "const": 1 },
+    "aggregateType": { "const": "WellboreDesign" },
+    "aggregateId": { "type": "string", "format": "uuid" },
+    "aggregateVersion": { "type": "integer", "minimum": 1 },
+    "occurredAtUtc": { "type": "string", "format": "date-time" },
+    "correlationId": { "type": "string", "minLength": 1 },
+    "causationId": { "type": ["string", "null"] },
+    "producer": { "const": "well-information-api" },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "wellboreDesignId",
+        "milestoneType",
+        "occurredAt",
+        "recordedAtUtc"
+      ],
+      "properties": {
+        "wellboreDesignId": { "type": "string", "format": "uuid" },
+        "milestoneType": {
+          "enum": [
+            "GnG data received",
+            "MDT conducted",
+            "Design initiated",
+            "Sent to DFS",
+            "Received from DFS",
+            "Sent to cementing team",
+            "Received from cementing team",
+            "Approvals initiated",
+            "Approvals Level 1",
+            "Approvals Level 2",
+            "Approvals Level 3"
+          ]
+        },
+        "occurredAt": { "type": "string", "format": "date-time" },
+        "recordedAtUtc": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

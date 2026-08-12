@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0b3d36">
+    <title>ONGC Insight Dashboard</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/dashboard.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <header class="app-header">
+        <div class="brand-mark" aria-hidden="true">WI</div>
+        <div class="brand-copy">
+            <strong>Well Information</strong>
+            <span>ONGC Insight Dashboard</span>
+        </div>
+        <nav class="header-nav">
+            <a href="/">Projects</a>
+            <a href="/dashboard.html" class="active">Dashboard</a>
+        </nav>
+        <div class="environment"><span></span> Local environment</div>
+    </header>
+
+    <main>
+        <section class="page-heading">
+            <div>
+                <p class="eyebrow">INSIGHT DASHBOARD</p>
+                <h1>Wellbore Progress</h1>
+                <p class="subtitle">Track DWP milestones across all wellbore designs.</p>
+            </div>
+            <button class="secondary-button" id="refresh-all" type="button">↻ Refresh</button>
+        </section>
+
+        <!-- Summary Cards -->
+        <section class="cards-row" id="summary-cards">
+            <div class="kpi-card">
+                <span class="kpi-label">Wells in view</span>
+                <span class="kpi-value" id="kpi-total">—</span>
+            </div>
+            <div class="kpi-card kpi-completed">
+                <span class="kpi-label">Completed</span>
+                <span class="kpi-value" id="kpi-completed">—</span>
+            </div>
+            <div class="kpi-card kpi-inprogress">
+                <span class="kpi-label">In progress</span>
+                <span class="kpi-value" id="kpi-inprogress">—</span>
+            </div>
+            <div class="kpi-card kpi-datareceived">
+                <span class="kpi-label">Data received</span>
+                <span class="kpi-value" id="kpi-datareceived">—</span>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-label">Avg days to complete</span>
+                <span class="kpi-value" id="kpi-avgdays">—</span>
+            </div>
+        </section>
+
+        <!-- Cycle time row -->
+        <section class="cards-row cycle-row" id="cycle-cards">
+            <div class="cycle-card">
+                <span class="cycle-label">Min days to complete</span>
+                <span class="cycle-value" id="cycle-min">—</span>
+            </div>
+            <div class="cycle-card">
+                <span class="cycle-label">Max days to complete</span>
+                <span class="cycle-value" id="cycle-max">—</span>
+            </div>
+            <div class="cycle-card">
+                <span class="cycle-label">Avg days to complete</span>
+                <span class="cycle-value" id="cycle-avg">—</span>
+            </div>
+        </section>
+
+        <div class="dashboard-grid">
+            <!-- Filter panel -->
+            <aside class="filter-panel">
+                <h3>Filters</h3>
+                <label class="filter-field">
+                    <span>Company</span>
+                    <select id="filter-company"><option value="">All</option></select>
+                </label>
+                <label class="filter-field">
+                    <span>Status</span>
+                    <div class="filter-toggles" id="filter-status">
+                        <button class="toggle-btn active" data-value="">All</button>
+                        <button class="toggle-btn" data-value="Data received">Data received</button>
+                        <button class="toggle-btn" data-value="In progress">In progress</button>
+                        <button class="toggle-btn" data-value="Completed">Completed</button>
+                    </div>
+                </label>
+                <label class="filter-field">
+                    <span>Search well name</span>
+                    <input type="text" id="filter-well" placeholder="e.g. A3">
+                </label>
+                <label class="filter-field">
+                    <span>Owner</span>
+                    <select id="filter-owner"><option value="">All</option></select>
+                </label>
+                <label class="filter-field">
+                    <span>Sort wells by</span>
+                    <select id="filter-sort">
+                        <option value="longest">Longest duration</option>
+                        <option value="alpha">Alphabetical</option>
+                        <option value="recent">Most recent</option>
+                    </select>
+                </label>
+                <button class="primary-button" id="apply-filters" style="width:100%;margin-top:8px">Apply filters</button>
+            </aside>
+
+            <!-- Charts area -->
+            <div class="charts-area">
+                <!-- Chart 1: Wellbore Progress Timeline -->
+                <section class="chart-panel">
+                    <div class="chart-header">
+                        <div>
+                            <p class="eyebrow">CHART 1</p>
+                            <h2>Wellbore Progress Timeline</h2>
+                            <p class="subtitle">Days from GnG data received through Level-3 final approval.</p>
+                        </div>
+                        <div class="view-toggle">
+                            <button class="toggle-btn active" id="chart1-chart-view">Chart</button>
+                            <button class="toggle-btn" id="chart1-table-view">Table</button>
+                        </div>
+                    </div>
+                    <div id="chart1-chart-container">
+                        <canvas id="chart1-canvas"></canvas>
+                    </div>
+                    <div id="chart1-table-container" hidden>
+                        <div class="table-shell">
+                            <table>
+                                <thead id="chart1-table-head"></thead>
+                                <tbody id="chart1-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Well Register Table -->
+                <section class="chart-panel">
+                    <div class="chart-header">
+                        <div>
+                            <p class="eyebrow">WELL REGISTER</p>
+                            <h2>Wellbore Summary</h2>
+                        </div>
+                    </div>
+                    <div class="table-shell">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Asset</th>
+                                    <th>Well / Wellbore</th>
+                                    <th>User</th>
+                                    <th>Current milestone</th>
+                                    <th>Date &amp; time</th>
+                                    <th>Approval level</th>
+                                    <th>Status</th>
+                                    <th>Days</th>
+                                    <th>% complete</th>
+                                </tr>
+                            </thead>
+                            <tbody id="register-table-body">
+                                <tr><td colspan="9" class="empty-state">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Chart 3: Approval Level Tracking -->
+                <section class="chart-panel">
+                    <div class="chart-header">
+                        <div>
+                            <p class="eyebrow">CHART 3</p>
+                            <h2>Approval Level Tracking</h2>
+                            <p class="subtitle">Days per approval level per wellbore.</p>
+                        </div>
+                    </div>
+                    <div>
+                        <canvas id="chart3-canvas"></canvas>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <div class="toast" id="toast" role="status" hidden></div>
+    <script src="/dashboard.js" defer></script>
+</body>
+</html>

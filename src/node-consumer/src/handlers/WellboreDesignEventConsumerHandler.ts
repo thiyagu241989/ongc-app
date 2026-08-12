@@ -1,14 +1,14 @@
 import type { EachMessagePayload } from "kafkajs";
 import type { Logger } from "pino";
 import { ZodError } from "zod";
-import { parseProjectEvent } from "../projectContracts.js";
-import { ProjectRepository } from "../repositories/projectRepository.js";
+import { parseWellboreDesignEvent } from "../wellboreDesignContracts.js";
+import { WellboreDesignRepository } from "../repositories/wellboreDesignRepository.js";
 import { executeWithRetry } from "../retry.js";
 import { DeadLetterQueuePublisher } from "../services/DeadLetterQueuePublisher.js";
 
-export class ProjectEventConsumerHandler {
+export class WellboreDesignEventConsumerHandler {
   public constructor(
-    private readonly repository: ProjectRepository,
+    private readonly repository: WellboreDesignRepository,
     private readonly dlqPublisher: DeadLetterQueuePublisher,
     private readonly logger: Logger
   ) {}
@@ -21,7 +21,7 @@ export class ProjectEventConsumerHandler {
     }
 
     try {
-      const event = parseProjectEvent(messageValue);
+      const event = parseWellboreDesignEvent(messageValue);
       const result = await executeWithRetry(
         () =>
           this.repository.apply(event, {
@@ -39,9 +39,9 @@ export class ProjectEventConsumerHandler {
               attempt,
               delayMs,
               eventId: event.eventId,
-              projectId: event.aggregateId
+              wellboreDesignId: event.aggregateId
             },
-            "Project event processing failed; retrying"
+            "Wellbore design event processing failed; retrying"
           );
         }
       );
@@ -49,11 +49,12 @@ export class ProjectEventConsumerHandler {
       this.logger.info(
         {
           eventId: event.eventId,
-          projectId: event.aggregateId,
+          wellboreDesignId: event.aggregateId,
+          eventType: event.eventType,
           aggregateVersion: event.aggregateVersion,
           result
         },
-        "Project event handled"
+        "Wellbore design event handled"
       );
     } catch (error) {
       if (error instanceof SyntaxError || error instanceof ZodError) {
@@ -82,12 +83,12 @@ export class ProjectEventConsumerHandler {
           reason,
           attemptCount
         },
-        "Unable to route failed project event to DLQ"
+        "Unable to route failed wellbore design event to DLQ"
       );
     }
   }
 
   private toErrorMessage(error: unknown): string {
-    return error instanceof Error ? error.message : "Unknown project event processing error";
+    return error instanceof Error ? error.message : "Unknown wellbore design event processing error";
   }
 }

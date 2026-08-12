@@ -3,7 +3,9 @@ import { Pool } from "pg";
 import pino from "pino";
 import { config } from "./config.js";
 import { ProjectEventConsumerHandler } from "./handlers/ProjectEventConsumerHandler.js";
+import { WellboreDesignEventConsumerHandler } from "./handlers/WellboreDesignEventConsumerHandler.js";
 import { ProjectRepository } from "./repositories/projectRepository.js";
+import { WellboreDesignRepository } from "./repositories/wellboreDesignRepository.js";
 import { DeadLetterQueuePublisher } from "./services/DeadLetterQueuePublisher.js";
 
 const logger = pino({ level: config.logLevel });
@@ -23,7 +25,18 @@ const deadLetterQueuePublisher = new DeadLetterQueuePublisher(
   config.kafkaClientId,
   logger
 );
+const wellboreDesignDlqPublisher = new DeadLetterQueuePublisher(
+  deadLetterProducer,
+  config.kafkaWellboreDesignDlqTopic,
+  config.kafkaGroupId,
+  config.kafkaClientId,
+  logger
+);
 const eventConsumerHandler = new ProjectEventConsumerHandler(repository, deadLetterQueuePublisher, logger);
+const wellboreDesignRepository = new WellboreDesignRepository(pool, config.kafkaClientId, config.kafkaGroupId);
+const wellboreDesignHandler = new WellboreDesignEventConsumerHandler(
+  wellboreDesignRepository, wellboreDesignDlqPublisher, logger
+);
 
 let isShuttingDown = false;
 
@@ -35,12 +48,16 @@ async function start(): Promise<void> {
   await pool.query("SELECT 1");
   await deadLetterQueuePublisher.connect();
   await consumer.connect();
-  await consumer.subscribe({ topic: config.kafkaTopic, fromBeginning: false });
+  await consumer.subscribe({ topics: [config.kafkaTopic, config.kafkaWellboreDesignTopic], fromBeginning: false });
   await consumer.run({
     autoCommit: false,
     eachMessage: async (payload) => {
       try {
-        await eventConsumerHandler.handle(payload);
+        if (payload.topic === config.kafkaWellboreDesignTopic) {
+          await wellboreDesignHandler.handle(payload);
+        } else {
+          await eventConsumerHandler.handle(payload);
+        }
       } catch (error) {
         logger.error(
           {
@@ -49,7 +66,7 @@ async function start(): Promise<void> {
             partition: payload.partition,
             offset: payload.message.offset
           },
-          "Unexpected error while handling project event"
+          "Unexpected error while handling event"
         );
       }
 
@@ -75,7 +92,10 @@ async function start(): Promise<void> {
     }
   });
 
-  logger.info({ topic: config.kafkaTopic, groupId: config.kafkaGroupId }, "Consumer started");
+  logger.info(
+    { topics: [config.kafkaTopic, config.kafkaWellboreDesignTopic], groupId: config.kafkaGroupId },
+    "Consumer started"
+  );
 }
 
 async function shutdown(signal: string): Promise<void> {

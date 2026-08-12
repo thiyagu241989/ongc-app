@@ -6,6 +6,37 @@ using WellInformation.Application;
 
 namespace WellInformation.Infrastructure;
 
+public sealed class WellboreDesignReadModel
+{
+    public Guid Id { get; set; }
+    public string Company { get; set; } = string.Empty;
+    public string Project { get; set; } = string.Empty;
+    public string Site { get; set; } = string.Empty;
+    public string Well { get; set; } = string.Empty;
+    public string Wellbore { get; set; } = string.Empty;
+    public string Design { get; set; } = string.Empty;
+    public string OwnerName { get; set; } = string.Empty;
+    public string DesignType { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public long AggregateVersion { get; set; }
+    public Guid SourceEventId { get; set; }
+    public bool IsDeleted { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+    public DateTimeOffset EventOccurredAt { get; set; }
+    public DateTimeOffset StoredAt { get; set; }
+}
+
+public sealed class MilestoneReadModel
+{
+    public Guid Id { get; set; }
+    public Guid WellboreDesignId { get; set; }
+    public string MilestoneType { get; set; } = string.Empty;
+    public DateTimeOffset OccurredAt { get; set; }
+    public Guid SourceEventId { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
 public sealed class ProjectReadModel
 {
     public Guid ProjectId { get; set; }
@@ -36,6 +67,8 @@ public sealed class WellInformationDbContext(DbContextOptions<WellInformationDbC
     : DbContext(options)
 {
     public DbSet<ProjectReadModel> ProjectReadModels => Set<ProjectReadModel>();
+    public DbSet<WellboreDesignReadModel> WellboreDesignReadModels => Set<WellboreDesignReadModel>();
+    public DbSet<MilestoneReadModel> MilestoneReadModels => Set<MilestoneReadModel>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -65,6 +98,38 @@ public sealed class WellInformationDbContext(DbContextOptions<WellInformationDbC
         readModel.Property(value => value.EventOccurredAt).HasColumnName("event_occurred_at");
         readModel.Property(value => value.ProjectedAt).HasColumnName("stored_at");
         readModel.HasQueryFilter(value => !value.IsDeleted);
+
+        var wdModel = modelBuilder.Entity<WellboreDesignReadModel>();
+        wdModel.ToTable("wellbore_designs");
+        wdModel.HasKey(d => d.Id);
+        wdModel.Property(d => d.Id).HasColumnName("id");
+        wdModel.Property(d => d.Company).HasColumnName("company").HasMaxLength(100);
+        wdModel.Property(d => d.Project).HasColumnName("project").HasMaxLength(100);
+        wdModel.Property(d => d.Site).HasColumnName("site").HasMaxLength(100);
+        wdModel.Property(d => d.Well).HasColumnName("well").HasMaxLength(100);
+        wdModel.Property(d => d.Wellbore).HasColumnName("wellbore").HasMaxLength(100);
+        wdModel.Property(d => d.Design).HasColumnName("design").HasMaxLength(100);
+        wdModel.Property(d => d.OwnerName).HasColumnName("owner_name").HasMaxLength(100);
+        wdModel.Property(d => d.DesignType).HasColumnName("design_type").HasMaxLength(20);
+        wdModel.Property(d => d.Status).HasColumnName("status").HasMaxLength(20);
+        wdModel.Property(d => d.AggregateVersion).HasColumnName("aggregate_version");
+        wdModel.Property(d => d.SourceEventId).HasColumnName("source_event_id");
+        wdModel.Property(d => d.IsDeleted).HasColumnName("is_deleted");
+        wdModel.Property(d => d.CreatedAt).HasColumnName("created_at");
+        wdModel.Property(d => d.UpdatedAt).HasColumnName("updated_at");
+        wdModel.Property(d => d.EventOccurredAt).HasColumnName("event_occurred_at");
+        wdModel.Property(d => d.StoredAt).HasColumnName("stored_at");
+        wdModel.HasQueryFilter(d => !d.IsDeleted);
+
+        var msModel = modelBuilder.Entity<MilestoneReadModel>();
+        msModel.ToTable("milestones");
+        msModel.HasKey(m => m.Id);
+        msModel.Property(m => m.Id).HasColumnName("id");
+        msModel.Property(m => m.WellboreDesignId).HasColumnName("wellbore_design_id");
+        msModel.Property(m => m.MilestoneType).HasColumnName("milestone_type").HasMaxLength(50);
+        msModel.Property(m => m.OccurredAt).HasColumnName("occurred_at");
+        msModel.Property(m => m.SourceEventId).HasColumnName("source_event_id");
+        msModel.Property(m => m.CreatedAt).HasColumnName("created_at");
     }
 }
 
@@ -94,6 +159,7 @@ public static class InfrastructureRegistration
             }).Build();
         });
         services.AddScoped<IProjectService, KafkaProjectService>();
+        services.AddScoped<IWellboreDesignService, KafkaWellboreDesignService>();
         return services;
     }
 }

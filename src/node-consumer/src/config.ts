@@ -24,6 +24,8 @@ const environmentSchema = z.object({
   KAFKA_GROUP_ID: z.string().min(1),
   KAFKA_TOPIC: z.string().min(1),
   KAFKA_DLQ_TOPIC: z.string().min(1),
+  KAFKA_WELLBORE_DESIGN_TOPIC: z.string().min(1).default("wellbore-designs.events.v1"),
+  KAFKA_WELLBORE_DESIGN_DLQ_TOPIC: z.string().min(1).default("wellbore-designs.events.v1.dlq"),
   DATABASE_URL: z.string().min(1),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
 });
@@ -36,6 +38,8 @@ export const config = {
   kafkaGroupId: environment.KAFKA_GROUP_ID,
   kafkaTopic: environment.KAFKA_TOPIC,
   kafkaDlqTopic: environment.KAFKA_DLQ_TOPIC,
+  kafkaWellboreDesignTopic: environment.KAFKA_WELLBORE_DESIGN_TOPIC,
+  kafkaWellboreDesignDlqTopic: environment.KAFKA_WELLBORE_DESIGN_DLQ_TOPIC,
   databaseUrl: environment.DATABASE_URL,
   logLevel: environment.LOG_LEVEL
 } as const;

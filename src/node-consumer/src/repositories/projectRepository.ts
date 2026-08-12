@@ -3,7 +3,7 @@ import type {
   ProjectDeletedEnvelope,
   ProjectEventEnvelope,
   ProjectUpsertEnvelope
-} from "../contracts.js";
+} from "../projectContracts.js";
 
 export interface KafkaPosition {
   topic: string;
