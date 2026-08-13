@@ -1,54 +1,61 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="380" viewBox="0 0 1800 380" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="260" viewBox="0 0 1100 260" role="img" aria-labelledby="title desc">
   <title id="title">Well Information Event-Driven Architecture</title>
-  <desc id="desc">UI sends write requests to C# API, API publishes to Kafka, Node.js consumer writes to PostgreSQL. UI reads status through C# API from PostgreSQL.</desc>
+  <desc id="desc">UI sends write requests to Node.js API, API publishes to Kafka, Node.js consumer writes to PostgreSQL. UI reads status through Node.js API from PostgreSQL.</desc>
   <defs>
     <style>
       .bg { fill: #14191f; }
-      .box { fill: #20262d; stroke: #1f88c9; stroke-width: 2; rx: 8; ry: 8; }
-      .db { fill: #20262d; stroke: #1f88c9; stroke-width: 2; }
-      .label { fill: #d7dde4; font-family: Segoe UI, Arial, sans-serif; font-size: 31px; }
-      .small { fill: #c7d0da; font-family: Segoe UI, Arial, sans-serif; font-size: 31px; }
-      .arrow { stroke: #1f88c9; stroke-width: 3; fill: none; }
-      .readArrow { stroke: #1f88c9; stroke-width: 2; stroke-dasharray: 6 6; fill: none; }
+      .box { fill: #20262d; stroke: #1f88c9; stroke-width: 1.5; rx: 6; ry: 6; }
+      .db { fill: #20262d; stroke: #1f88c9; stroke-width: 1.5; }
+      .label { fill: #d7dde4; font-family: Segoe UI, Arial, sans-serif; font-size: 14px; font-weight: 600; }
+      .edge { fill: #8eacbf; font-family: Segoe UI, Arial, sans-serif; font-size: 11px; }
+      .arrow { stroke: #1f88c9; stroke-width: 2; fill: none; }
+      .readArrow { stroke: #1f88c9; stroke-width: 1.5; stroke-dasharray: 5 4; fill: none; }
     </style>
-    <marker id="arrowHead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
-      <path d="M0,0 L0,6 L9,3 z" fill="#1f88c9" />
+    <marker id="ah" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L8,3 z" fill="#1f88c9" />
     </marker>
   </defs>
 
-  <rect class="bg" x="0" y="0" width="1800" height="380" />
+  <rect class="bg" width="1100" height="260" />
 
-  <rect class="box" x="60" y="120" width="220" height="90" />
-  <text class="label" x="170" y="175" text-anchor="middle">Project UI</text>
+  <!-- UI -->
+  <rect class="box" x="30" y="80" width="100" height="50" />
+  <text class="label" x="80" y="110" text-anchor="middle">UI</text>
 
-  <rect class="box" x="430" y="120" width="170" height="90" />
-  <text class="label" x="515" y="175" text-anchor="middle">C# API</text>
+  <!-- Node.js API -->
+  <rect class="box" x="230" y="80" width="130" height="50" />
+  <text class="label" x="295" y="110" text-anchor="middle">Node.js API</text>
 
-  <rect class="box" x="760" y="95" width="250" height="90" />
-  <text class="label" x="885" y="150" text-anchor="middle">Kafka projects.events.v1</text>
+  <!-- Kafka -->
+  <rect class="box" x="460" y="80" width="100" height="50" />
+  <text class="label" x="510" y="110" text-anchor="middle">Kafka</text>
 
-  <rect class="box" x="1140" y="85" width="220" height="110" />
-  <text class="label" x="1250" y="150" text-anchor="middle">Node.js Consumer</text>
+  <!-- Node.js Consumer -->
+  <rect class="box" x="660" y="80" width="150" height="50" />
+  <text class="label" x="735" y="110" text-anchor="middle">Node.js Consumer</text>
 
-  <ellipse class="db" cx="1570" cy="105" rx="130" ry="25" />
-  <rect class="db" x="1440" y="105" width="260" height="90" />
-  <ellipse class="db" cx="1570" cy="195" rx="130" ry="25" />
-  <text class="label" x="1570" y="155" text-anchor="middle">WellInformationDB.public.projects</text>
+  <!-- PostgreSQL -->
+  <ellipse class="db" cx="940" cy="85" rx="80" ry="14" />
+  <rect class="db" x="860" y="85" width="160" height="50" />
+  <ellipse class="db" cx="940" cy="135" rx="80" ry="14" />
+  <text class="label" x="940" y="115" text-anchor="middle">PostgreSQL</text>
 
-  <path class="arrow" marker-end="url(#arrowHead)" d="M280 162 L430 162" />
-  <text class="small" x="355" y="150" text-anchor="middle">Create or update request</text>
+  <!-- Write path arrows -->
+  <path class="arrow" marker-end="url(#ah)" d="M130,100 L228,100" />
+  <text class="edge" x="179" y="93" text-anchor="middle">Write request</text>
 
-  <path class="arrow" marker-end="url(#arrowHead)" d="M600 140 L760 140" />
-  <text class="small" x="680" y="130" text-anchor="middle">Publish event</text>
+  <path class="arrow" marker-end="url(#ah)" d="M360,100 L458,100" />
+  <text class="edge" x="409" y="93" text-anchor="middle">Publish event</text>
 
-  <path class="arrow" marker-end="url(#arrowHead)" d="M1010 140 L1140 140" />
+  <path class="arrow" marker-end="url(#ah)" d="M560,100 L658,100" />
 
-  <path class="arrow" marker-end="url(#arrowHead)" d="M1360 140 L1440 155" />
-  <text class="small" x="1400" y="145" text-anchor="middle">Store project data</text>
+  <path class="arrow" marker-end="url(#ah)" d="M810,105 L858,105" />
+  <text class="edge" x="834" y="98" text-anchor="middle">Store</text>
 
-  <path class="readArrow" marker-end="url(#arrowHead)" d="M280 190 L430 190" />
-  <text class="small" x="355" y="210" text-anchor="middle">Read project status</text>
+  <!-- Read path arrows -->
+  <path class="readArrow" marker-end="url(#ah)" d="M130,118 L228,118" />
+  <text class="edge" x="179" y="140" text-anchor="middle">Read status</text>
 
-  <path class="readArrow" marker-end="url(#arrowHead)" d="M600 190 C760 230, 1250 240, 1440 185" />
-  <text class="small" x="980" y="225" text-anchor="middle">Read only</text>
+  <path class="readArrow" marker-end="url(#ah)" d="M360,125 C500,175 750,175 858,130" />
+  <text class="edge" x="610" y="175" text-anchor="middle">Read only</text>
 </svg>

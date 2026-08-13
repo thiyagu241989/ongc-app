@@ -1,6 +1,6 @@
 # Well Information Management Platform
 
-This repository contains a direct event-driven workflow for the Well Information Management platform: a .NET validation and Kafka API, a TypeScript consumer, and Node-owned PostgreSQL project storage.
+This repository contains a direct event-driven workflow for the Well Information Management platform: a Node.js validation and Kafka API, a TypeScript consumer, and Node-owned PostgreSQL project storage.
 
 ## Documentation
 
@@ -16,10 +16,10 @@ This repository contains a direct event-driven workflow for the Well Information
 ![Well Information architecture flow](docs/images/architecture-flow.svg)
 
 ```text
-Well Information UI
+UI
         |
         v
-C# API -> Kafka projects.events.v1
+Node.js API -> Kafka projects.events.v1
         |
         v
 Node.js Consumer -> WellInformationDB projects + kafka_consumer_logs
@@ -28,20 +28,20 @@ Node.js Consumer -> WellInformationDB projects + kafka_consumer_logs
 Dashboard query
 ```
 
-The C# API validates and publishes events but does not write project data to PostgreSQL. The Node.js consumer is the sole project writer. Kafka delivery is at least once, so the consumer uses event IDs and aggregate versions to make processing idempotent.
+The Node.js API validates and publishes events but does not write project data to PostgreSQL. The Node.js consumer is the sole project writer. Kafka delivery is at least once, so the consumer uses event IDs and aggregate versions to make processing idempotent.
 
 ## Request and Data Flow Guarantees
 
-- **Valid Request:** UI -> C# API -> Validate -> Kafka -> Node.js -> PostgreSQL.
-- **Read Data:** UI -> C# Read API -> PostgreSQL -> UI.
-- **Invalid Request:** C# validation fails -> Return error -> No Kafka publish or DB write.
-- **Kafka Publish Failure:** C# retries -> If still fails, return failure -> Client can safely retry.
+- **Valid Request:** UI -> Node.js API -> Validate -> Kafka -> Node.js -> PostgreSQL.
+- **Read Data:** UI -> Node.js Read API -> PostgreSQL -> UI.
+- **Invalid Request:** Node.js validation fails -> Return error -> No Kafka publish or DB write.
+- **Kafka Publish Failure:** Node.js retries -> If still fails, return failure -> Client can safely retry.
 - **Consumer Success:** Node.js consumes -> Validates -> Transactional upsert -> Commit Kafka offset.
 - **Duplicate or Out-of-Order Event:** Idempotency/version checks prevent incorrect data overwrite.
 - **Consumer Failure:** Node.js retries processing -> Continue normally if successful.
 - **Poison Message:** After retries fail -> Move message to DLQ -> Consumer continues processing other messages.
 - **DLQ Recovery:** Failed messages can be investigated and replayed later.
-- **C# Read API Rule:** C# only reads project data from PostgreSQL; it does not write project data.
+- **Read API Rule:** The API only reads project data from PostgreSQL; it does not write project data.
 
 ## System Maintenance Points
 
@@ -54,18 +54,21 @@ The C# API validates and publishes events but does not write project data to Pos
 - **Data Integrity:** Handle duplicate, out-of-order, and repeated events safely.
 - **Error Handling:** Properly handle Kafka, DB, API, and malformed-payload failures.
 - **Configuration Management:** Maintain environment-specific configuration through `.env`.
-- **Logging and Tracing:** Use proper logs and correlation IDs to trace UI -> C# -> Kafka -> Node.js -> DB.
+- **Logging and Tracing:** Use proper logs and correlation IDs to trace UI -> Node.js API -> Kafka -> Node.js -> DB.
 
 ## Prerequisites
 
-- .NET SDK 10.0.302 or a compatible patch
 - Node.js 20 or later
 - Docker Desktop with Linux containers
 
 ## Build and Test
 
 ```powershell
-dotnet test .\src\dotnet\WellInformation.sln --configuration Release
+Push-Location .\src\node-api
+npm install
+npm run typecheck
+npm run build
+Pop-Location
 
 Push-Location .\src\node-consumer
 npm install
@@ -96,7 +99,8 @@ The local stack publishes PostgreSQL on `localhost:15432` and Kafka on `localhos
 In separate terminals, start the API and consumer:
 
 ```powershell
-dotnet run --project .\src\dotnet\WellInformation.Api --urls http://localhost:5080
+Push-Location .\src\node-api
+npm run dev
 
 Push-Location .\src\node-consumer
 npm start
@@ -108,7 +112,7 @@ Open the project entry screen after both processes are running:
 http://localhost:5080
 ```
 
-Complete the form and select **Create project**. The pipeline confirms C# validation, direct Kafka publication, Node.js consumption, and Node-owned PostgreSQL storage. The created project then appears in the recent projects table.
+Complete the form and select **Create project**. The pipeline confirms Node.js validation, direct Kafka publication, Node.js consumption, and Node-owned PostgreSQL storage. The created project then appears in the recent projects table.
 
 Connect pgAdmin to the same PostgreSQL server using:
 
@@ -172,6 +176,6 @@ Run the automated create, update, stale-version, delete, direct-publication, own
 & .\tests\end-to-end\basic-flow.ps1
 ```
 
-The API publishes `ProjectCreated`, `ProjectUpdated`, and `ProjectDeleted` directly to Kafka. The Node.js consumer validates each event and stores project data idempotently using event IDs and aggregate versions. C# has read-only access to the Node-owned project table.
+The API publishes `ProjectCreated`, `ProjectUpdated`, and `ProjectDeleted` directly to Kafka. The Node.js consumer validates each event and stores project data idempotently using event IDs and aggregate versions. The API has read-only access to the Node-owned project table.
 
 The MVP is intentionally unauthenticated for local development. OIDC authorization, `ProjectWorkflow`, and production deployment/monitoring remain future enhancements.
