@@ -1,4 +1,5 @@
 import express from "express";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Pool } from "pg";
@@ -10,7 +11,12 @@ import { createDashboardRouter } from "./routes/dashboard.js";
 import { createHealthRouter } from "./routes/health.js";
 import { createProjectsRouter } from "./routes/projects.js";
 
+// Resolve project root (works from both src/ via tsx and dist/src/ via node)
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const projectRoot = path.resolve(__dirname, "..");
+const publicDir = existsSync(path.join(projectRoot, "public"))
+  ? path.join(projectRoot, "public")
+  : path.resolve(__dirname, "..", "..", "public");
 
 export function createApp(pool: Pool, publisher: KafkaEventPublisher, logger: Logger): express.Express {
   const app = express();
@@ -26,7 +32,7 @@ export function createApp(pool: Pool, publisher: KafkaEventPublisher, logger: Lo
   app.use("/api/v1/projects", createProjectsRouter(pool, publisher));
   app.use("/api/v1/dashboard/projects", createDashboardRouter(pool));
 
-  app.use(express.static(path.join(__dirname, "..", "public")));
+  app.use(express.static(publicDir));
 
   app.use(
     (
