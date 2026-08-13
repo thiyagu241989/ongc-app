@@ -1,72 +1,51 @@
 # Well Information Management Platform
 
-This repository contains a direct event-driven workflow for the Well Information Management platform: a .NET validation and Kafka API, a TypeScript consumer, and Node-owned PostgreSQL project storage.
+Event-driven wellbore design tracking: a Node.js Express API validates and publishes events to Kafka, a Node.js consumer projects events into PostgreSQL, and the API reads projected data back for the UI.
 
 ## Documentation
 
 - [Architecture and implementation plan](docs/architecture-and-implementation-plan.md)
-- [Initial PostgreSQL schema](database/001_initial_schema.sql)
-- [ProjectCreated JSON Schema](contracts/project-created-v1.schema.json)
-- [ProjectUpdated JSON Schema](contracts/project-updated-v1.schema.json)
-- [ProjectDeleted JSON Schema](contracts/project-deleted-v1.schema.json)
-- [OpenAPI 3.1 specification](docs/api/openapi.yaml)
+- [WellboreDesignCreated JSON Schema](contracts/wellbore-design-created-v1.schema.json)
+- [MilestoneRecorded JSON Schema](contracts/milestone-recorded-v1.schema.json)
+- [Database: wellbore designs + milestones](database/002_insight_dashboard_schema.sql)
 
-## Basic Flow
+## Architecture
 
 ![Well Information architecture flow](docs/images/architecture-flow.svg)
 
 ```text
-Well Information UI
-        |
-        v
-C# API -> Kafka projects.events.v1
-        |
-        v
-Node.js Consumer -> WellInformationDB projects + kafka_consumer_logs
-        |
-        v
-Dashboard query
+UI → Node.js API → Kafka (wellbore-designs.events.v1) → Node.js Consumer → PostgreSQL
+                                                                                 ↓
+                                                                   Node.js Read API ← UI
 ```
 
-The C# API validates and publishes events but does not write project data to PostgreSQL. The Node.js consumer is the sole project writer. Kafka delivery is at least once, so the consumer uses event IDs and aggregate versions to make processing idempotent.
+The Node.js API validates requests, publishes events (`WellboreDesignCreated`, `MilestoneRecorded`) to Kafka, and reads projected data from PostgreSQL. The Node.js consumer is the sole writer to the `wellbore_designs` and `milestones` tables.
 
-## Request and Data Flow Guarantees
+## Request and Data Flow
 
-- **Valid Request:** UI -> C# API -> Validate -> Kafka -> Node.js -> PostgreSQL.
-- **Read Data:** UI -> C# Read API -> PostgreSQL -> UI.
-- **Invalid Request:** C# validation fails -> Return error -> No Kafka publish or DB write.
-- **Kafka Publish Failure:** C# retries -> If still fails, return failure -> Client can safely retry.
-- **Consumer Success:** Node.js consumes -> Validates -> Transactional upsert -> Commit Kafka offset.
-- **Duplicate or Out-of-Order Event:** Idempotency/version checks prevent incorrect data overwrite.
-- **Consumer Failure:** Node.js retries processing -> Continue normally if successful.
-- **Poison Message:** After retries fail -> Move message to DLQ -> Consumer continues processing other messages.
-- **DLQ Recovery:** Failed messages can be investigated and replayed later.
-- **C# Read API Rule:** C# only reads project data from PostgreSQL; it does not write project data.
-
-## System Maintenance Points
-
-- **API Health:** Monitor API availability, liveness/readiness, and failures.
-- **Kafka Health:** Monitor broker connectivity, disk usage, and topic health.
-- **Kafka Producer:** Handle retries and monitor publish failures.
-- **Kafka Consumer:** Monitor consumer status, lag, retries, and offsets.
-- **DLQ Monitoring:** Track failed messages and support investigation/replay.
-- **PostgreSQL Health:** Monitor database availability, connections, and performance.
-- **Data Integrity:** Handle duplicate, out-of-order, and repeated events safely.
-- **Error Handling:** Properly handle Kafka, DB, API, and malformed-payload failures.
-- **Configuration Management:** Maintain environment-specific configuration through `.env`.
-- **Logging and Tracing:** Use proper logs and correlation IDs to trace UI -> C# -> Kafka -> Node.js -> DB.
+- **Create design:** UI → API validates → Kafka publish → Consumer projects → PostgreSQL.
+- **Record milestone:** UI → API validates + reads design → Kafka publish → Consumer updates status.
+- **Read data:** UI → API → PostgreSQL → UI.
+- **Kafka failure:** API returns 503; client retries safely.
+- **Duplicate event:** Consumer detects via event ID; skips silently.
+- **Poison message:** Consumer retries up to 5×, then routes to DLQ.
 
 ## Prerequisites
 
-- .NET SDK 10.0.302 or a compatible patch
 - Node.js 20 or later
 - Docker Desktop with Linux containers
 
 ## Build and Test
 
 ```powershell
-dotnet test .\src\dotnet\WellInformation.sln --configuration Release
+# Node.js API
+Push-Location .\src\node-api
+npm install
+npm run typecheck
+npm run build
+Pop-Location
 
+# Node.js consumer
 Push-Location .\src\node-consumer
 npm install
 npm run typecheck
@@ -75,103 +54,69 @@ npm run build
 Pop-Location
 ```
 
-## Run the Complete Flow
-
-Create a local environment file from the repository template:
+## Run Locally
 
 ```powershell
-Copy-Item .\.env.example .\.env
+Copy-Item .\.env.example .\.env      # first time only
+docker compose up -d                  # PostgreSQL :15432, Kafka :19093
 ```
 
-The API and Node consumer both read values from `.env` (or from already-set process environment variables).
-
-Start PostgreSQL and Kafka:
+In separate terminals:
 
 ```powershell
-docker compose up -d
+# Terminal 1 — API
+Push-Location .\src\node-api; npm run dev
+
+# Terminal 2 — Consumer
+Push-Location .\src\node-consumer; npm run dev
 ```
 
-The local stack publishes PostgreSQL on `localhost:15432` and Kafka on `localhost:19093` to avoid common default-port conflicts. The application database is `WellInformationDB`.
+Open `http://localhost:5080` — the UI redirects to the wellbore designs page.
 
-In separate terminals, start the API and consumer:
+## Example API Calls
+
+Create a wellbore design:
 
 ```powershell
-dotnet run --project .\src\dotnet\WellInformation.Api --urls http://localhost:5080
+$body = @{
+    company    = "ONGC"
+    project    = "Mumbai High North"
+    site       = "MHN Platform A"
+    well       = "A-3"
+    wellbore   = "A-3 ST1"
+    design     = "A-3 ST1 Casing Design"
+    ownerName  = "R. Sharma"
+    designType = "Standard"
+    milestones = @(
+        @{ milestoneType = "GnG data received"; occurredAt = "2026-01-10T09:00:00Z" }
+    )
+} | ConvertTo-Json -Depth 3
 
-Push-Location .\src\node-consumer
-npm start
+Invoke-RestMethod -Method Post `
+    -Uri http://localhost:5080/api/v1/wellbore-designs `
+    -ContentType application/json `
+    -Body $body
 ```
 
-Open the project entry screen after both processes are running:
+Record a milestone:
 
-```text
-http://localhost:5080
+```powershell
+$ms = @{ milestoneType = "MDT conducted"; occurredAt = "2026-01-15T14:30:00Z" } | ConvertTo-Json
+
+Invoke-RestMethod -Method Post `
+    -Uri http://localhost:5080/api/v1/wellbore-designs/<id>/milestones `
+    -ContentType application/json `
+    -Body $ms
 ```
 
-Complete the form and select **Create project**. The pipeline confirms C# validation, direct Kafka publication, Node.js consumption, and Node-owned PostgreSQL storage. The created project then appears in the recent projects table.
-
-Connect pgAdmin to the same PostgreSQL server using:
+## PostgreSQL Access
 
 ```text
 Host: localhost
 Port: 15432
-Maintenance database: WellInformationDB
+Database: WellInformationDB
 Username: postgres
 Password: postgres
 ```
 
-New projects are written by Node.js to `WellInformationDB.public.projects`. Kafka processing records are stored in `WellInformationDB.public.kafka_consumer_logs`.
-
-Create a project:
-
-```powershell
-$body = @{
-        projectCode = "ONGC-PRJ-001"
-        projectName = "Western Offshore Development"
-        wellName = "WO-Alpha-01"
-        operatorName = "ONGC"
-        status = "Draft"
-} | ConvertTo-Json
-
-Invoke-RestMethod `
-        -Method Post `
-        -Uri http://localhost:5080/api/v1/projects `
-        -ContentType application/json `
-        -Body $body
-```
-
-Use the returned `projectId` to verify the Kafka-created dashboard projection:
-
-```powershell
-Invoke-RestMethod http://localhost:5080/api/v1/dashboard/projects/<projectId>
-```
-
-Update the project with the current ETag version:
-
-```powershell
-Invoke-RestMethod `
-        -Method Put `
-        -Uri http://localhost:5080/api/v1/projects/<projectId> `
-        -Headers @{ "If-Match" = '"1"' } `
-        -ContentType application/json `
-        -Body $updatedBody
-```
-
-Soft-delete version 2:
-
-```powershell
-Invoke-WebRequest -UseBasicParsing `
-        -Method Delete `
-        -Uri http://localhost:5080/api/v1/projects/<projectId> `
-        -Headers @{ "If-Match" = '"2"' }
-```
-
-Run the automated create, update, stale-version, delete, direct-publication, ownership, and DLQ workflow:
-
-```powershell
-& .\tests\end-to-end\basic-flow.ps1
-```
-
-The API publishes `ProjectCreated`, `ProjectUpdated`, and `ProjectDeleted` directly to Kafka. The Node.js consumer validates each event and stores project data idempotently using event IDs and aggregate versions. C# has read-only access to the Node-owned project table.
-
-The MVP is intentionally unauthenticated for local development. OIDC authorization, `ProjectWorkflow`, and production deployment/monitoring remain future enhancements.
+Tables: `wellbore_designs`, `milestones`, `kafka_consumer_logs`.

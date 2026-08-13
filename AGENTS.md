@@ -2,37 +2,39 @@
 
 ## Architecture
 
-Direct event-driven system: C# API validates and publishes to Kafka; Node.js consumer projects events into PostgreSQL. The API never writes project rows — it only reads projected data.
+Direct event-driven system: Node.js API validates and publishes to Kafka; Node.js consumer projects events into PostgreSQL. The API never writes design rows — it only reads projected data.
 
 See [docs/architecture-and-implementation-plan.md](docs/architecture-and-implementation-plan.md) for full design rationale.
 
 ```
-UI → C# API → Kafka (projects.events.v1) → Node.js Consumer → PostgreSQL
-                                                                    ↓
-                                                          C# Read API ← UI
+UI → Node.js API → Kafka (wellbore-designs.events.v1) → Node.js Consumer → PostgreSQL
+                                                                                 ↓
+                                                                   Node.js Read API ← UI
 ```
 
 ### Key ownership rules
 
-- **C# API** owns validation and Kafka event publishing. It reads projects from PostgreSQL but never writes them.
-- **Node.js consumer** is the sole project writer. All inserts/updates to the `projects` table originate here.
-- **Kafka** is the event backbone. Topic `projects.events.v1`; DLQ `projects.events.v1.dlq`.
+- **Node.js API** owns validation and Kafka event publishing. It reads from PostgreSQL but never writes designs.
+- **Node.js consumer** is the sole writer. All inserts/updates to `wellbore_designs` and `milestones` originate here.
+- **Kafka** is the event backbone. Topic `wellbore-designs.events.v1`; DLQ `wellbore-designs.events.v1.dlq`.
 
-### Layering (.NET)
+### Layering (Node.js API)
 
-| Layer | Project | Responsibility |
-|-------|---------|----------------|
-| Domain | `WellInformation.Domain` | State model, lifecycle rules |
-| Application | `WellInformation.Application` | Request/response DTOs, validation, service interfaces |
-| Contracts | `WellInformation.Contracts` | Event envelope and payload records |
-| Infrastructure | `WellInformation.Infrastructure` | EF Core persistence, Kafka producer |
-| API | `WellInformation.Api` | Controllers, startup, HTTP semantics |
+| Path | Responsibility |
+|------|----------------|
+| `src/node-api/src/validation.ts` | Zod schemas, domain constants, `deriveStatus` |
+| `src/node-api/src/kafka-producer.ts` | Event envelope construction, Kafka publish |
+| `src/node-api/src/routes/wellbore-designs.ts` | CRUD + milestone endpoints |
+| `src/node-api/src/routes/dashboard.ts` | Dashboard insight analytics endpoints |
+| `src/node-api/src/routes/health.ts` | Liveness and readiness probes |
+| `src/node-api/src/app.ts` | Express app setup, static files, error handling |
+| `src/node-api/src/index.ts` | Server startup, graceful shutdown |
 
 ### Event model
 
 Envelope: `eventId`, `eventType`, `eventVersion`, `aggregateType`, `aggregateId`, `aggregateVersion`, `occurredAtUtc`, `correlationId`, `causationId`, `producer`, `data`.  
-Types: `ProjectCreated`, `ProjectUpdated`, `ProjectDeleted`.  
-Schemas: [contracts/](contracts/) (JSON Schema) and [src/node-consumer/src/contracts.ts](src/node-consumer/src/contracts.ts) (Zod).
+Types: `WellboreDesignCreated`, `MilestoneRecorded`.  
+Schemas: [contracts/](contracts/) (JSON Schema) and [src/node-consumer/src/wellboreDesignContracts.ts](src/node-consumer/src/wellboreDesignContracts.ts) (Zod).
 
 ### Idempotency
 
@@ -41,8 +43,12 @@ Consumer uses event IDs and aggregate versions to prevent duplicate or out-of-or
 ## Build and Test
 
 ```powershell
-# .NET — build and test
-dotnet test .\src\dotnet\WellInformation.sln --configuration Release
+# Node.js API — typecheck and build
+Push-Location .\src\node-api
+npm install
+npm run typecheck
+npm run build
+Pop-Location
 
 # Node consumer — typecheck, test, build
 Push-Location .\src\node-consumer
@@ -51,9 +57,6 @@ npm run typecheck
 npm test
 npm run build
 Pop-Location
-
-# End-to-end (requires running stack)
-.\tests\end-to-end\basic-flow.ps1
 ```
 
 ## Run Locally
@@ -63,22 +66,22 @@ Copy-Item .\.env.example .\.env      # first time only
 docker compose up -d                  # PostgreSQL :15432, Kafka :19093
 
 # Terminal 1
-dotnet run --project .\src\dotnet\WellInformation.Api --urls http://localhost:5080
+Push-Location .\src\node-api; npm run dev
 
 # Terminal 2
-Push-Location .\src\node-consumer; npm start
+Push-Location .\src\node-consumer; npm run dev
 ```
 
-UI at `http://localhost:5080`. See [README.md](README.md) for example curl/PowerShell commands.
+UI at `http://localhost:5080`. See [README.md](README.md) for example PowerShell commands.
 
 ## Conventions
 
-### .NET
+### Node.js API
 
-- Target `net10.0`; SDK pinned to `10.0.302` in [global.json](global.json).
-- PascalCase for files, classes, records, methods. Interface prefix `I` (e.g. `IProjectService`).
-- Domain exceptions map to HTTP ProblemDetails in controllers: validation → 400, duplicate code → 409, version conflict → 412, missing `If-Match` → 428, Kafka failure → 503.
-- ETag/`If-Match` concurrency is required for update and delete operations.
+- Node ≥ 20. TypeScript, Express 4, kafkajs, pg, zod, pino.
+- camelCase for module files. Validation uses zod `.strict()` to reject unknown fields.
+- Validation errors return `{ title, status: 400, errors: { field: [messages] } }`.
+- Kafka failures → 503; duplicate designs → 409; not found → 404.
 
 ### Node.js consumer
 
@@ -90,9 +93,9 @@ UI at `http://localhost:5080`. See [README.md](README.md) for example curl/Power
 
 ### Kafka
 
-- Topic naming: `{domain}.{entity}.v{version}` (e.g. `projects.events.v1`).
+- Topic naming: `{domain}.{entity}.v{version}` (e.g. `wellbore-designs.events.v1`).
 - DLQ topic: append `.dlq` suffix.
-- Message key: `projectId` (ensures partition ordering per project).
+- Message key: `wellboreDesignId` (ensures partition ordering per design).
 - Manual offset commits; offsets committed even after handler failure to avoid partition blocking.
 
 ## Pitfalls
@@ -101,5 +104,5 @@ UI at `http://localhost:5080`. See [README.md](README.md) for example curl/Power
 - **Eventual consistency**: A successful API response means Kafka accepted the event, not that the projection is visible yet.
 - **Kafka topics not auto-created**: The `kafka-init` compose service must succeed, or producers/consumers will fail.
 - **PostgreSQL extensions**: Schema requires `pgcrypto` and `pg_trgm`.
-- **Env var styles differ**: .NET uses `ConnectionStrings__WellInformationDB`; Node uses `KAFKA_BROKERS`.
+- **Env vars**: API uses `DATABASE_URL`, `KAFKA_BROKERS`, `KAFKA_WELLBORE_DESIGN_TOPIC`; Consumer uses `KAFKA_GROUP_ID` additionally.
 - **No lint commands**: Only typecheck, test, and build are available.
